@@ -1,0 +1,8 @@
+{
+  "id": "customer-agent",
+  "document": "Fetches customer information such as loyalty tier and preferences. Supports enrichment of rental offers.",
+  "metadata": {
+    "capabilities": ["customer-profile", "enrichment"],
+    "endpoint": "http://customer-agent:8000/query",
+    "type": "agent"
+  }

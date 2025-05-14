@@ -1,0 +1,10 @@
+{
+  "id": "pricing-service",
+  "document": "Returns pricing for vehicles based on type and duration. Accepts input with 'vehicle_type' and 'days'.",
+  "metadata": {
+    "url": "http://pricing-service:8000/pricing",
+    "provides": ["price-calc"],
+    "auth": "none",
+    "format": "application/json"
+  }
+}

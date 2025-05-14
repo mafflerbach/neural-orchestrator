@@ -1,0 +1,81 @@
+# -------- Docker Compose --------
+# Compose file includes:
+# - Fixture services
+# - Shared log volume
+# - Two ChromaDB instances (agents + services)
+
+version: '3.8'
+services:
+  rental-service:
+    build: ./rental-service
+    ports:
+      - "7001:8000"
+    volumes:
+      - ./logs:/shared/logs
+
+  pricing-service:
+    build: ./pricing-service
+    ports:
+      - "7002:8000"
+    volumes:
+      - ./logs:/shared/logs
+
+  customer-service:
+    build: ./customer-service
+    ports:
+      - "7003:8000"
+    volumes:
+      - ./logs:/shared/logs
+
+  chroma-agents:
+    image: chromadb/chroma
+    ports:
+      - "8001:8000"
+    volumes:
+      - chroma-agents-data:/chroma
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/heartbeat"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  chroma-services:
+    image: chromadb/chroma
+    ports:
+      - "8002:8000"
+    volumes:
+      - chroma-services-data:/chroma
+
+  chroma-agents-init:
+    build: ./chroma-agents-init
+    depends_on:
+      chroma-agents:
+        condition: service_healthy
+    command: python3 /app/bootstrap_chroma.py --source /app/bootstrap/agents --host chroma-agents --port 8000 --collection agents
+    volumes:
+      - ./chroma-agents-init/bootstrap:/app/bootstrap
+    logging:
+      driver: json-file
+      options:
+        max-size: "1m"
+        max-file: "1"
+
+  chroma-services-init:
+    build: ./chroma-services-init
+    depends_on:
+      - chroma-services
+    command: python3 /app/bootstrap_chroma.py --source /app/bootstrap/services --host chroma-services --port 8000 --collection services
+    volumes:
+      - ./chroma-services-init/bootstrap:/app/bootstrap
+
+# LATER
+  # trace-observer:
+  #   build: ./trace-observer
+  #   ports:
+  #     - "9000:8000"
+  #   volumes:
+  #     - ./logs:/shared/logs
+      
+volumes:
+  chroma-agents-data:
+  chroma-services-data:
