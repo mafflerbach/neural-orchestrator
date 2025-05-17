@@ -1,10 +1,3 @@
-### 🧱 Fixture Services: rental-service, pricing-service, customer-service
-# Base: Python FastAPI
-# Features:
-# - Receives structured requests
-# - Logs to /shared/logs/trace.log with correlation ID and fake JWT
-# - Simple deterministic responses
-
 from fastapi import FastAPI, Request
 from pydantic import BaseModel
 import uvicorn
@@ -13,10 +6,8 @@ import json
 from datetime import datetime
 
 app = FastAPI()
-
 LOG_PATH = "/shared/logs/trace.log"
 
-# Utilities
 def log_event(service: str, correlation_id: str, request_data: dict, response_data: dict, jwt: dict):
     event = {
         "timestamp": datetime.utcnow().isoformat(),
@@ -30,20 +21,23 @@ def log_event(service: str, correlation_id: str, request_data: dict, response_da
     with open(LOG_PATH, "a") as log_file:
         log_file.write(json.dumps(event) + "\n")
 
-# -------- Customer Service --------
-customer_app = FastAPI()
-
 class CustomerResponse(BaseModel):
     tier: str
     preferences: dict
 
-@customer_app.get("/customer/{customer_id}")
-async def get_customer(customer_id: str, request: Request):
-    correlation_id = request.headers.get("X-Correlation-ID", "none")
-    fake_jwt = json.loads(request.headers.get("X-JWT", "{}"))
-    response = {
-        "tier": "platinum" if customer_id == "123456" else "standard",
-        "preferences": {"vehicle": "SUV"}
-    }
-    log_event("customer-service", correlation_id, {"customer_id": customer_id}, response, fake_jwt)
-    return response
+
+@app.post("/customer/{customer_id}")
+async def get_customer(customer_id: int):
+    # Load all fixtures
+    with open("fixture.json", "r") as f:
+        all_data = json.load(f)
+
+    customer = next((c for c in all_data["customers"] if int(c["id"]) == customer_id), None)
+
+    if not customer:
+        return {"error": "Customer not found"}
+
+    return customer
+
+if __name__ == "__main__":
+    uvicorn.run("main:app", host="0.0.0.0", port=8000)

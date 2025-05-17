@@ -2,8 +2,8 @@
   "id": "rental-service",
   "document": "Provides availability of vehicles by location and date. Supports SUV, Sedan, and Compact.",
   "metadata": {
-    "url": "http://rental-service:8000/availability",
-    "provides": ["availability-check"],
+    "endpoint": "http://rental-service:8000/availability",
+    "provides_availability_check": true,
     "auth": "none",
     "format": "application/json"
   }

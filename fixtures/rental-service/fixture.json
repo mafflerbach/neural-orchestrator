@@ -1,0 +1,23 @@
+   [
+    {
+      "type": "SUV",
+      "available": true,
+      "location": "MUC",
+      "start_date": "2023-10-01",
+      "end_date": "2023-10-10"
+    },
+    {
+      "type": "Sedan",
+      "available": true,
+      "location": "MUC",
+      "start_date": "2023-10-01",
+      "end_date": "2023-10-10"
+    },
+    {
+      "type": "Golf",
+      "available": true,
+      "location": "MUC",
+      "start_date": "2023-10-01",
+      "end_date": "2023-10-10"
+    }
+  ]

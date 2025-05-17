@@ -1,0 +1,18 @@
+   [
+    {
+      "type": "SUV",
+      "available": true,
+      "base_price": 50
+    },
+    {
+      "type": "Sedan",
+      "available": true,
+      "base_price": 20
+    },
+    {
+      "type": "Golf",
+      "available": true,
+      "base_price": 30
+    }
+  ]
+

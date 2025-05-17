@@ -1,10 +1,9 @@
-
 {
   "id": "customer-service",
   "document": "Returns metadata about a customer, including loyalty tier and vehicle preferences.",
   "metadata": {
-    "url": "http://customer-service:8000/customer/{customer_id}",
-    "provides": ["customer-profile"],
+    "endpoint": "http://customer-service:8000/customer/{customer_id}",
+    "provides_customer_profile": true,
     "auth": "none",
     "format": "application/json"
   }

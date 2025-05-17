@@ -1,0 +1,19 @@
+{
+  "id": "customer-service",
+  "document": "Returns metadata about a customer, including loyalty tier and vehicle preferences.",
+  "metadata": {
+    "endpoint": "http://customer-service:8000/customer/{customer_id}",
+    "auth": "none",
+    "format": "application/json",
+    "provides": ["customer_profile"],
+    "tags": ["customer", "profile", "preferences", "loyalty"],
+    "inputs": "customer_id",
+    "outputs": "id,tier",
+    "example_output": "{\"id\": 1234, \"tier\": \"platinum\"}",
+    "contract_input": "{\"type\": \"object\", \"required\": [\"customer_id\"], \"properties\": {\"customer_id\": {\"type\": \"integer\"}}}",
+    "contract_output": "{\"type\": \"object\", \"required\": [\"id\", \"tier\"], \"properties\": {\"id\": {\"type\": \"integer\"}, \"tier\": {\"type\": \"string\"}}}",
+    "defaults": {
+      "customer_id": 1234
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "pythonVersion": "3.11",
+  "pythonPlatform": "Darwin",
+  "include": ["."],
+  "executionEnvironments": [
+    {
+      "root": ".",
+      "extraPaths": [
+        "/opt/homebrew/lib/python3.11/site-packages"
+      ]
+    }
+  ]
+}

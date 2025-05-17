@@ -1,0 +1,20 @@
+{
+  "customers": [
+    {
+      "tier": "platinum",
+      "id": "1234"
+    },
+    {
+      "tier": "gold",
+      "id": "2345"
+    },
+    {
+      "tier": "under_18",
+      "id": "3456"
+    },
+    {
+      "tier": "basic",
+      "id": "4567"
+    }
+  ]
+}

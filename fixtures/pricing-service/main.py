@@ -1,22 +1,18 @@
-### 🧱 Fixture Services: rental-service, pricing-service, customer-service
-# Base: Python FastAPI
-# Features:
-# - Receives structured requests
-# - Logs to /shared/logs/trace.log with correlation ID and fake JWT
-# - Simple deterministic responses
-
 from fastapi import FastAPI, Request
 from pydantic import BaseModel
-import uvicorn
-import os
-import json
+from typing import Dict
+import os, json
 from datetime import datetime
 
 app = FastAPI()
 
 LOG_PATH = "/shared/logs/trace.log"
 
-# Utilities
+class PricingRequest(BaseModel):
+    vehicle_type: str
+    days: int
+    customer_tier: str
+
 def log_event(service: str, correlation_id: str, request_data: dict, response_data: dict, jwt: dict):
     event = {
         "timestamp": datetime.utcnow().isoformat(),
@@ -27,25 +23,45 @@ def log_event(service: str, correlation_id: str, request_data: dict, response_da
         "response": response_data
     }
     os.makedirs(os.path.dirname(LOG_PATH), exist_ok=True)
-    with open(LOG_PATH, "a") as log_file:
-        log_file.write(json.dumps(event) + "\n")
+    with open(LOG_PATH, "a") as f:
+        f.write(json.dumps(event) + "\n")
 
-# -------- Pricing Service --------
-pricing_app = FastAPI()
-
-class PricingRequest(BaseModel):
-    vehicle_type: str
-    days: int
-    customer_tier: str
-
-@pricing_app.post("/pricing")
+@app.post("/pricing")
 async def get_pricing(req: PricingRequest, request: Request):
     correlation_id = request.headers.get("X-Correlation-ID", "none")
     fake_jwt = json.loads(request.headers.get("X-JWT", "{}"))
-    base_price = 50 if req.vehicle_type == "SUV" else 30
-    multiplier = 0.8 if req.customer_tier == "platinum" else 1.0
+
+    # Load fixture
+    fixture_path = os.path.join(os.path.dirname(__file__), "fixture.json")
+    with open(fixture_path, "r") as f:
+        fixture = json.load(f)
+
+    # Find base price for vehicle type
+    match = next((item for item in fixture if item["type"].lower() == req.vehicle_type.lower()), None)
+    if not match:
+        return {"error": f"vehicle type '{req.vehicle_type}' not found in fixture"}
+
+    base_price = match["base_price"]
+
+    # Determine multiplier
+    tier_multiplier = {
+        "platinum": 0.5,
+        "gold": 0.7,
+        "premium": 0.8,
+        "under_18": 1.2
+    }
+    multiplier = tier_multiplier.get(req.customer_tier.lower(), 1.0)
+
     total_price = req.days * base_price * multiplier
-    response = {"price": total_price}
+
+    response = {
+        "vehicle_type": req.vehicle_type,
+        "days": req.days,
+        "customer_tier": req.customer_tier,
+        "base_price": base_price,
+        "multiplier": multiplier,
+        "total_price": total_price
+    }
+
     log_event("pricing-service", correlation_id, req.dict(), response, fake_jwt)
     return response
-

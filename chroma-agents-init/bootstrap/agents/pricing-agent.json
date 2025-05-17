@@ -1,9 +1,0 @@
-{
-  "id": "pricing-agent",
-  "document": "Handles price calculation for rental offers based on vehicle type, customer tier, and rental duration.",
-  "metadata": {
-    "capabilities": ["pricing", "personalization"],
-    "endpoint": "http://pricing-agent:8000/query",
-    "type": "agent"
-  }
-}
