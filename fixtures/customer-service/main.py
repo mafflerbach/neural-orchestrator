@@ -22,7 +22,7 @@ def log_event(service: str, correlation_id: str, request_data: dict, response_da
         log_file.write(json.dumps(event) + "\n")
 
 class CustomerResponse(BaseModel):
-    tier: str
+    customer_tier: str
     preferences: dict
 
 

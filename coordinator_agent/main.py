@@ -1,8 +1,14 @@
-from fastapi import FastAPI, HTTPException
-import os, requests, json, uuid
 from datetime import datetime
+from fastapi import FastAPI, HTTPException
+from fastapi import HTTPException
+from fastapi.responses import PlainTextResponse
+from jsonschema import validate, ValidationError
 from typing import List, Dict, Any
+
+import json
+import os, requests, json, uuid
 import re
+import logging
 
 
 app = FastAPI()
@@ -17,75 +23,37 @@ embed_path    = os.getenv("lmstudio_embed_path", "/v1/embeddings")
 chat_path     = os.getenv("lmstudio_chat_path",  "/v1/chat/completions")
 embed_model   = os.getenv("embed_model",   "text-embedding-all-minilm-l12-v2")
 chat_model    = os.getenv("chat_model",    "swe-dev-32b-i1")
-
 collection        = "services"
 log_path          = "/shared/logs/trace.log"
-request_timeout   = (2, 40)   # connect, read timeouts
+request_timeout   = (2, 60)   # connect, read timeouts
+
+SYSTEM_PROMPT_PATH = os.getenv("SERVICE_SELECTION_SYSTEM_PROMPT", "coordinator_agent/prompts/serviceSelectionSystem.txt")
+USER_PROMPT_PATH   = os.getenv("SERVICE_SELECTION_USER_PROMPT", "coordinator_agent/prompts/serviceSelectionUser.txt")
+
+FULL_URL = lmstudio_url.rstrip("/") + chat_path
 # ────────────────────────────────────────────────────────────────────────────────
-def parse_inputs(field):
-    if isinstance(field, str):
-        return [x.strip() for x in field.split(",")]
-    return field or []
 
-def extract_json_like(content: str) -> str:
-    match = re.search(r"\{.*\}", content, re.DOTALL)
-    return match.group(0) if match else "{}"
+logger = logging.getLogger("coordinator")
+logger.setLevel(logging.INFO)
 
 
-def get_collection_id() -> str:
-    resp = requests.get(f"{chroma_services_url}/api/v1/collections", timeout=request_timeout)
-    resp.raise_for_status()
-    for col in resp.json():
-        if col.get("name") == collection:
-            return col["id"]
-    raise runtimeerror(f"collection '{collection}' not found")
-
-def log_event(correlation_id: str, service: Dict[str,Any], req: Dict, res: Dict, reason: str = "", query: str = ""):
-    event = {
-        "timestamp": datetime.utcnow().isoformat(),
-        "service": "coordinator-agent",
-        "correlation_id": correlation_id,
-        "jwt": {},
-        "request": req,
-        "response": res,
-        "target_service": service["id"],
-        "target_url": service["metadata"].get("url") or service["metadata"].get("endpoint"),
-        "reason": reason
-    }
-    if query:
-        event["query"] = query
-
-    os.makedirs(os.path.dirname(log_path), exist_ok=True)
-    with open(log_path, "a") as f:
-        f.write(json.dumps(event) + "\n")
+from coordinator_agent.utils import (
+    build_candidates_section,
+    load_prompt,
+    parse_inputs,
+    extract_json_like,
+    extract,
+    get_collection_id,
+    log_event,
+    topo_sort_services,
+    resolve_inputs,
+    resolve_fields,
+    is_resolvable,
+    resolve_with_sources,
+    allow_nulls
+)
 
 
-def resolve_inputs(contract_str: str, body: Dict[str, Any], previous_results: Dict[str, Any]) -> Dict[str, Any] | None:
-    try:
-        contract = json.loads(contract_str)
-        required_fields = contract.get("required", [])
-        properties = contract.get("properties", {})
-
-        resolved = {}
-        for field in required_fields:
-            # Try from request body
-            if field in body:
-                resolved[field] = body[field]
-            # Try from prior responses
-            else:
-                for result in previous_results.values():
-                    if isinstance(result, dict) and field in result:
-                        resolved[field] = result[field]
-                        break
-
-        if all(field in resolved for field in required_fields):
-            return resolved
-        else:
-            return None
-
-    except Exception as e:
-        print(f"Input resolution error: {e}")
-        return None
 
 
 @app.get("/api/search")
@@ -141,55 +109,37 @@ def semantic_search(q: str, k: int = 5):
     return results
 
 
+
 @app.post("/api/rerank")
 def rerank(body: Dict):
-    q          = body.get("query")
+    q = body.get("query")
     candidates = body.get("candidates", [])
     if not q or not candidates:
-        raise httpexception(400, detail="require 'query' and 'candidates'")
+        raise HTTPException(400, detail="require 'query' and 'candidates'")
 
-    # build a multi-pick prompt
-    def build_line(c):
-        m = c["metadata"]
-        provides = ", ".join(m.get("provides", []))
-        tags     = ", ".join(m.get("tags", []))
-        return (
-            f"{c['id']}:\n"
-            f"  description: {c['document']}\n"
-            f"  provides: {provides}\n"
-            f"  tags: {tags}\n"
-            f"  endpoint: {m.get('endpoint')}"
-        )
+    system_prompt = load_prompt(SYSTEM_PROMPT_PATH)
+    user_template = load_prompt(USER_PROMPT_PATH)
+    # --- 1. Build candidate description block ---
+    user_prompt = user_template \
+        .replace("{{query}}", q) \
+        .replace("{{candidates}}", build_candidates_section(candidates))
 
-    lines = [build_line(c) for c in candidates]
-
-    user_prompt = (
-        f"user request: {q}\n\n"
-        "candidates (id: name):\n" + "\n".join(lines) +
-        "\n\nwhich of these services are required?  "
-        "respond with json like:\n"
-        "{\n"
-        '  "pickids":["id1","id2"],\n'
-        '  "reasons":{\n'
-        '    "id1":"why for id1",\n'
-        '    "id2":"why for id2"\n'
-        "  }\n"
-        "}"
-    )
-
+    # --- 2. Build and send LLM request ---
     chat_url = lmstudio_url.rstrip("/") + chat_path
     payload = {
         "model": chat_model,
         "messages": [
-            { "role":"system", "content":"you are an service selector." },
-            { "role":"user",   "content":user_prompt }
+            { "role": "system", "content": system_prompt },
+            { "role": "user",   "content": user_prompt }
         ],
         "temperature": 0
     }
+
     try:
+
         r = requests.post(chat_url, json=payload, timeout=request_timeout)
         r.raise_for_status()
-        content = r.json().get("choices",[])[0].get("message",{}).get("content","")
+        content = r.json().get("choices", [])[0].get("message", {}).get("content", "")
 
         try:
             picked = json.loads(content)
@@ -197,115 +147,21 @@ def rerank(body: Dict):
             picked = json.loads(extract_json_like(content))
 
         pickids: List[str] = picked.get("pickids", [])
-        reasons: Dict[str,str] = picked.get("reasons", {})
+        order: List[str] = picked.get("order", pickids)
+        reasons: Dict[str, str] = picked.get("reasons", {})
+
         if not pickids:
-            raise runtimeerror("no pickids returned")
-    except exception as e:
-        raise httpexception(502, detail=f"rerank error: {e}")
+            raise RuntimeError("no pickids returned")
+
+    except Exception as e:
+        raise HTTPException(502, detail=f"rerank error: {e}")
 
     return {
         "pickids": pickids,
+        "order": order,
         "reasons": reasons,
         "raw_response": content
     }
-
-
-@app.post("/api/dispatch")
-def dispatch(body: Dict):
-    query      = body.get("query")
-    candidates = body.get("candidates", [])
-    if not query or not candidates:
-        raise HTTPException(400, detail="require 'query' and 'candidates'")
-
-    correlation_id = str(uuid.uuid4())
-
-    rerank_result = rerank({"query": query, "candidates": candidates})
-    pickids = rerank_result["pickids"]
-    reasons = rerank_result["reasons"]
-    raw_response  = rerank_result.get("raw_response", "")
-
-
-
-    # ── 2) fan‐out calls ──────────────────────────────────────────────────────────
-    responses: Dict[str, Any] = {}
-    executed = set()
-    responses = {}
-    context = body.copy()
-
-    while True:
-        progress = False
-        for pid in pickids:
-            if pid in executed:
-                continue
-
-            svc = next((c for c in candidates if c["id"] == pid), None)
-            if not svc:
-                continue
-
-            contract_str = svc["metadata"].get("contract_input", "{}")
-            try:
-                contract = json.loads(contract_str)
-            except Exception:
-                contract = {}
-
-            required = contract.get("required", [])
-            props = contract.get("properties", {})
-
-            # Attempt to resolve all required fields from context or previous responses
-            resolved = {}
-            for key in required:
-                if key in context:
-                    resolved[key] = context[key]
-                else:
-                    # Try pulling from earlier service results
-                    for r in responses.values():
-                        if isinstance(r, dict) and key in r:
-                            resolved[key] = r[key]
-                            break
-
-            if all(key in resolved for key in required):
-                url = svc["metadata"]["endpoint"]
-                headers = {
-                    "content-type": "application/json",
-                    "x-correlation-id": correlation_id,
-                    "x-jwt": "{}"
-                }
-                try:
-                    sub_r = requests.post(url, json=resolved, headers=headers, timeout=request_timeout)
-                    sub_r.raise_for_status()
-                    try:
-                        res = sub_r.json()
-                    except ValueError:
-                        res = {"error": "invalid JSON", "raw": sub_r.text[:200]}
-                except Exception as e:
-                    res = {"error": str(e)}
-
-                responses[pid] = res
-                executed.add(pid)
-                context.update(res)
-                log_event(
-                    correlation_id,
-                    svc,
-                    resolved,
-                    res,
-                    reason=reasons.get(pid, "inferred from contract chaining"),
-                    query=query
-                )
-                progress = True
-
-        if not progress:
-            break
-
-    # ── 3) return merged result ──────────────────────────────────────────────────
-    return {
-        "pickids":   pickids,
-        "reasons":   reasons,
-        "responses": responses,
-        "llm_raw":   raw_response
-    }
-
-
-from fastapi.responses import PlainTextResponse
 
 @app.get("/api/logs", response_class=PlainTextResponse)
 def read_logs():
@@ -315,3 +171,197 @@ def read_logs():
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Log file not found")
 
+
+
+
+
+@app.post("/api/dispatch")
+def dispatch(body: Dict):
+    query = body.get("query")
+    candidates = body.get("candidates", [])
+    if not query or not candidates:
+        raise HTTPException(400, detail="require 'query' and 'candidates'")
+
+    correlation_id = str(uuid.uuid4())
+
+    rerank_result = rerank({"query": query, "candidates": candidates})
+    pickids = rerank_result["pickids"]
+    reasons = rerank_result["reasons"]
+    raw_response = rerank_result.get("raw_response", "")
+
+    responses: Dict[str, Any] = {}
+    executed = set()
+    context = body.copy()
+    contract_map = {}
+    merged_props = {}
+
+    for svc in candidates:
+        pid = svc["id"]
+        if pid not in pickids:
+            continue
+
+        contract_input = json.loads(svc["metadata"].get("contract_input", "{}"))
+        contract_output = json.loads(svc["metadata"].get("contract_output", "{}"))
+
+        contract_map[pid] = {
+            "input": contract_input,
+            "output": contract_output
+        }
+
+        for k, v in contract_input.get("properties", {}).items():
+            merged_props[k] = v
+
+    schema = {"type": "object", "properties": merged_props}
+    schema = allow_nulls(schema)
+    result = extract(prompt=query, schema=schema)
+
+    resolvable_services = [
+        pid for pid in pickids
+        if pid in contract_map and is_resolvable(contract_map[pid]["input"], context)
+    ]
+
+
+
+    cleaned_result = {
+        k: v for k, v in result.items()
+        if v is not None and str(v).strip().lower() != "null"
+    }
+    context.update(cleaned_result)
+
+    if not cleaned_result:
+        raise HTTPException(400, detail="No usable values extracted from query")
+
+
+    resolvable = {
+        pid for pid in pickids
+        if pid in contract_map and is_resolvable(contract_map[pid]["input"], context)
+    }
+
+    try:
+        order = topo_sort_services(list(resolvable), contract_map, context.keys())
+    except RuntimeError as e:
+        # If resolution still fails (e.g. circular deps), skip topo and rely on retry loop
+        print(f"[dispatch()] Topo sort failed: {e}")
+        order = list(resolvable)
+
+
+
+
+    prev_ctx_keys = set(context.keys())
+    retries = 0
+    max_retries = 5
+
+    while True:
+        progress = False
+        unresolved = []
+
+        remaining = [pid for pid in pickids if pid not in executed]
+        if not remaining:
+            break
+
+        for pid in remaining:
+            if pid in executed:
+                continue
+
+            svc = next((c for c in candidates if c["id"] == pid), None)
+            if not svc:
+                continue
+
+            contract = contract_map.get(pid, {})
+            contract_input = contract.get("input", {})
+            props = contract_input.get("properties", {})
+            raw_required = contract_input.get("required")
+            required = raw_required or [
+                k for k, v in props.items()
+                if not (isinstance(v.get("type"), list) and "null" in v["type"])
+            ]
+
+            resolved = {
+                k: context[k] for k in required
+                if k in context and context[k] is not None and str(context[k]).lower() != "null"
+            }
+
+            missing = [k for k in required if k not in resolved]
+            if missing:
+                unresolved.append((pid, missing))
+                continue
+
+            url = svc["metadata"]["endpoint"]
+            for k, v in resolved.items():
+                url = url.replace(f"{{{k}}}", str(v))
+
+            headers = {
+                "content-type": "application/json",
+                "x-correlation-id": correlation_id,
+                "x-jwt": "{}"
+            }
+
+            try:
+                sub_r = requests.post(url, json=resolved, headers=headers, timeout=request_timeout)
+                sub_r.raise_for_status()
+                try:
+                    res = sub_r.json()
+                except ValueError:
+                    res = {"error": "invalid JSON", "raw": sub_r.text[:200]}
+            except Exception as e:
+                res = {"error": str(e)}
+
+            responses[pid] = res
+            executed.add(pid)
+            context.update(res)
+
+            log_event(
+                correlation_id,
+                svc,
+                resolved,
+                res,
+                reason=reasons.get(pid, "executed after dependency resolution"),
+                query=query
+            )
+
+            progress = True
+
+        current_ctx_keys = set(context.keys())
+
+        if not progress and current_ctx_keys == prev_ctx_keys:
+            retries += 1
+        else:
+            retries = 0
+
+        prev_ctx_keys = current_ctx_keys
+
+        if retries >= max_retries:
+            break
+
+        if not progress:
+            try:
+                initial_fields = set(context.keys())
+                order = topo_sort_services(pickids, contract_map, initial_fields)
+            except RuntimeError as e:
+                break
+
+    for pid, missing in unresolved:
+        skip_entry = {
+            "skipped": True,
+            "missing_inputs": missing,
+            "reason": "Unresolvable inputs after dependency resolution loop."
+        }
+        svc = next((c for c in candidates if c["id"] == pid), None)
+        if svc:
+            log_event(
+                correlation_id,
+                svc,
+                context,
+                skip_entry,
+                reason=skip_entry["reason"],
+                query=query
+            )
+        responses[pid] = skip_entry
+
+    return {
+        "pickids": pickids,
+        "reasons": reasons,
+        "responses": responses,
+        "skipped": {k: v for k, v in responses.items() if v.get("skipped")},
+        "llm_raw": raw_response
+    }

@@ -9,13 +9,8 @@
     "tags": ["rental", "availability", "vehicles", "location", "date"],
     "inputs": "location,start_date,end_date",
     "outputs": "type,available,location,start_date,end_date",
-    "example_output": "{\"type\": \"SUV\", \"available\": true, \"location\": \"MUC\", \"start_date\": \"2023-12-12\", \"end_date\": \"2023-12-20\"}",
-    "contract_input": "{\"type\": \"object\", \"required\": [\"location\", \"start_date\", \"end_date\"], \"properties\": {\"location\": {\"type\": \"string\"}, \"start_date\": {\"type\": \"string\", \"format\": \"date\"}, \"end_date\": {\"type\": \"string\", \"format\": \"date\"}}}",
-    "contract_output": "{\"type\": \"object\", \"required\": [\"type\", \"available\", \"location\", \"start_date\", \"end_date\"], \"properties\": {\"type\": {\"type\": \"string\"}, \"available\": {\"type\": \"boolean\"}, \"location\": {\"type\": \"string\"}, \"start_date\": {\"type\": \"string\", \"format\": \"date\"}, \"end_date\": {\"type\": \"string\", \"format\": \"date\"}}}",
-    "defaults": {
-      "location": "MUC",
-      "start_date": "2025-05-16",
-      "end_date": "2025-05-19"
-    }
+    "contract_input": "{\"type\":\"object\",\"required\":[\"location\",\"start_date\",\"end_date\"],\"properties\":{\"location\":{\"type\":\"string\"},\"start_date\":{\"type\":\"string\",\"format\":\"date\"},\"end_date\":{\"type\":\"string\",\"format\":\"date\"}}}",
+    "contract_output": "{\"type\":\"object\",\"required\":[\"type\",\"available\",\"location\",\"start_date\",\"end_date\"],\"properties\":{\"type\":{\"type\":\"string\"},\"available\":{\"type\":\"boolean\"},\"location\":{\"type\":\"string\"},\"start_date\":{\"type\":\"string\",\"format\":\"date\"},\"end_date\":{\"type\":\"string\",\"format\":\"date\"}}}",
+    "example_output": "{\"type\": \"SUV\", \"available\": true, \"location\": \"MUC\", \"start_date\": \"2023-12-12\", \"end_date\": \"2023-12-20\"}"
   }
 }

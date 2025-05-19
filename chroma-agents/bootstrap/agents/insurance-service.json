@@ -6,15 +6,11 @@
     "auth": "none",
     "format": "application/json",
     "provides": ["insurance_calc"],
-    "tags": ["insurance", "risk", "vehicle", "tier"],
+    "tags": ["insurance", "risk", "vehicle", "customer_tier"],
     "inputs": "vehicle_type,customer_tier",
     "outputs": "vehicle_type,customer_tier,insurance_cost",
-    "example_output": "{\"vehicle_type\": \"SUV\", \"customer_tier\": \"platinum\", \"insurance_cost\": 19.99}",
-    "defaults": {
-      "vehicle_type": "SUV",
-      "customer_tier": "platinum"
-    },
-    "contract_input": "{\"type\":\"object\",\"properties\":{\"vehicle_type\":{\"type\":\"string\"},\"customer_tier\":{\"type\":\"string\"}},\"required\":[\"vehicle_type\",\"customer_tier\"]}",
-    "contract_output": "{\"type\":\"object\",\"properties\":{\"vehicle_type\":{\"type\":\"string\"},\"customer_tier\":{\"type\":\"string\"},\"insurance_cost\":{\"type\":\"number\"}},\"required\":[\"insurance_cost\"]}"
+    "contract_input": "{\"type\":\"object\",\"required\":[\"vehicle_type\",\"customer_tier\"],\"properties\":{\"vehicle_type\":{\"type\":\"string\"},\"customer_tier\":{\"type\":\"string\"}}}",
+    "contract_output": "{\"type\":\"object\",\"required\":[\"insurance_cost\"],\"properties\":{\"vehicle_type\":{\"type\":\"string\"},\"customer_tier\":{\"type\":\"string\"},\"insurance_cost\":{\"type\":\"number\"}}}",
+    "example_output": "{\"vehicle_type\": \"SUV\", \"customer_tier\": \"platinum\", \"insurance_cost\": 19.99}"
   }
 }

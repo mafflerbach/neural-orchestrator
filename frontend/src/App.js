@@ -6,8 +6,8 @@ import TraceViewer from './TraceViewer';
 export default function App() {
   const [query, setQuery]               = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
-  const [candidates, setCandidates]     = useState([]);
   const [pickIds, setPickIds]           = useState([]);
+  const [candidates, setCandidates]     = useState([]);
   const [reasons, setReasons]           = useState({});
   const [responses, setResponses]       = useState({});
   const [loading, setLoading]           = useState(false);
@@ -104,7 +104,7 @@ useEffect(() => {
   };
 
   return (
-    <div className="p-6 max-w-lg mx-auto">
+   <div className="px-6 py-8 max-w-screen-2xl mx-auto w-full">
       <h1 className="text-2xl font-bold mb-4">Semantic Agent Orchestrator</h1>
 
       <input
@@ -169,7 +169,7 @@ useEffect(() => {
 
 
       <div className="mt-10">
-        <TraceViewer />
+        <TraceViewer/>
       </div>
 
     </div>

@@ -1,6 +1,6 @@
 {
   "id": "customer-service",
-  "document": "Returns metadata about a customer, including loyalty tier and vehicle preferences.",
+  "document": "Returns metadata about a customer, including loyalty customer tier and vehicle preferences.",
   "metadata": {
     "endpoint": "http://customer-service:8000/customer/{customer_id}",
     "provides_customer_profile": true,

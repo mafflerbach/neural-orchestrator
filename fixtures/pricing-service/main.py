@@ -10,7 +10,6 @@ LOG_PATH = "/shared/logs/trace.log"
 
 class PricingRequest(BaseModel):
     vehicle_type: str
-    days: int
     customer_tier: str
 
 def log_event(service: str, correlation_id: str, request_data: dict, response_data: dict, jwt: dict):
@@ -52,11 +51,11 @@ async def get_pricing(req: PricingRequest, request: Request):
     }
     multiplier = tier_multiplier.get(req.customer_tier.lower(), 1.0)
 
-    total_price = req.days * base_price * multiplier
+    total_price = 1 * base_price * multiplier
 
     response = {
         "vehicle_type": req.vehicle_type,
-        "days": req.days,
+        "days": 1,
         "customer_tier": req.customer_tier,
         "base_price": base_price,
         "multiplier": multiplier,

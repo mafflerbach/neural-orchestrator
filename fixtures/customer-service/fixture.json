@@ -1,19 +1,19 @@
 {
   "customers": [
     {
-      "tier": "platinum",
+      "customer_tier": "platinum",
       "id": "1234"
     },
     {
-      "tier": "gold",
+      "customer_tier": "gold",
       "id": "2345"
     },
     {
-      "tier": "under_18",
+      "customer_tier": "under_18",
       "id": "3456"
     },
     {
-      "tier": "basic",
+      "customer_tier": "basic",
       "id": "4567"
     }
   ]

@@ -1,0 +1,21 @@
+User request:
+{{query}}
+
+Available services:
+
+{{candidates}}
+
+Your task:
+- Select only those services needed to fulfill the request.
+- Include support services that provide required data for others, even if not directly mentioned.
+- Base your decisions only on the provided descriptions, inputs, outputs, and tags.
+
+Return a single valid JSON object using the following schema:
+
+{
+  "pickids": [string],        // Selected service IDs
+  "order": [string],          // Execution order based on input/output dependencies
+  "reasons": { string: string } // Explanation for each included service
+}
+
+Return JSON only. Do not include explanations, formatting, or comments.

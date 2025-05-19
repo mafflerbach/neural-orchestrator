@@ -8,10 +8,10 @@
     "provides": ["customer_profile"],
     "tags": ["customer", "profile", "preferences", "loyalty"],
     "inputs": "customer_id",
-    "outputs": "id,tier",
-    "example_output": "{\"id\": 1234, \"tier\": \"platinum\"}",
-    "contract_input": "{\"type\": \"object\", \"required\": [\"customer_id\"], \"properties\": {\"customer_id\": {\"type\": \"integer\"}}}",
-    "contract_output": "{\"type\": \"object\", \"required\": [\"id\", \"tier\"], \"properties\": {\"id\": {\"type\": \"integer\"}, \"tier\": {\"type\": \"string\"}}}",
+    "outputs": "id,customer_tier",
+    "example_output": "{\"id\": 1234, \"customer_tier\": \"platinum\"}",
+    "contract_input": "{\"type\":\"object\",\"required\":[\"customer_id\"],\"properties\":{\"customer_id\":{\"type\":\"integer\"}}}",
+    "contract_output": "{\"type\": \"object\", \"required\": [\"id\", \"customer_tier\"], \"properties\": {\"id\": {\"type\": \"integer\"}, \"customer_tier\": {\"type\": \"string\"}}}",
     "defaults": {
       "customer_id": 1234
     }
