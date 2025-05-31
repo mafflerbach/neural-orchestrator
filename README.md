@@ -1,4 +1,4 @@
-# 🧠 Chroma Agent Orchestrator
+# 🧠 Neural Orchestrator
 
 A lightweight **multi-agent orchestration system** using LLMs, declarative service contracts, and semantic service discovery powered by ChromaDB.
 
@@ -59,7 +59,7 @@ User Query → LLM (via LM Studio)
 ## 📦 Repository Structure
 
 ```plaintext
-chroma-agent-orchestrator/
+neural-orchestrator/
 ├── chroma-agents/         # Service definitions + ChromaDB bootstrapper
 ├── coordinator_agent/     # Main orchestrator using FastAPI + LLM
 ├── frontend/              # Stubbed UI (planned trace viewer)
