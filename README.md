@@ -1,215 +1,143 @@
-# 🧠 chroma-agent-orchestrator
+# 🧠 Chroma Agent Orchestrator
 
-A lightweight multi-agent orchestration system using LLMs, JSON contracts, and service chaining with semantic discovery via ChromaDB.
+A lightweight **multi-agent orchestration system** using LLMs, declarative service contracts, and semantic service discovery powered by ChromaDB.
 
----
-
-## 🎯 Executive Summary
-
-This project demonstrates a **modular, AI-assisted orchestration system** for service execution and automation.
-
-### 🌐 What it does  
-It allows users—whether human or machine—to express their goals in plain language. The system then:
-1. **Understands the request** using a language model
-2. **Identifies relevant backend services**
-3. **Figures out what needs to run, in what order**
-4. **Executes the services automatically**
-5. **Returns the complete result, with full traceability**
-
-Think of it as an **AI-powered dispatcher** that builds just-in-time service pipelines from natural language.
+<p align="center">
+  <img src="./assets/logo.png" alt="Chroma Agent Orchestrator Logo" width="128"/>
+</p>
 
 ---
 
-### 💡 Why this matters
+## 🎯 TL;DR
 
-This project is a **Proof of Concept (PoC)** for:
-- **Agentic systems** — the future of automation and orchestration
-- **LLM-enhanced backends** — turning vague input into structured system behavior
-- **Composable services** — everything is defined by contracts, making reuse and chaining trivial
-- **Intelligent observability** — every step is logged and traceable
+This is your AI-powered conductor for backend service automation.
 
-It enables **business logic composition at runtime**, rather than through pre-defined pipelines or hardcoded integrations.
-
----
-
-### 📈 Potential Use Cases
-- **Customer Support**: Automatically trigger workflows based on customer messages
-- **Sales Automation**: Assemble service responses based on intent ("Give me a leasing offer for an SUV")
-- **DevOps**: Self-healing systems triggered by natural language alerts
-- **Internal Tools**: Dynamic dashboards that reconfigure based on stakeholder prompts
+Speak to it in plain English—"Find me an SUV for a premium customer in Munich"—and watch it:
+1. Understand your intent with an LLM
+2. Discover matching services via semantic search
+3. Chain them into an executable pipeline
+4. Dispatch requests with proper contracts
+5. Return the final result with full traceability
 
 ---
 
-### 🧭 Strategic Relevance
 
-This prototype supports experimentation with:
-- **Autonomous software agents**
-- **Declarative backend composition**
-- **Service governance via contracts**
-- **AI-driven integration without traditional middleware**
-
-It's aligned with modern trends in:
-- **AI Ops & Developer Experience**
-- **Composable Business Architectures**
-- **Digital Transformation through ML-assisted orchestration**
-
----
-
-### 🛠️ Tech Stack (non-exhaustive)
-| Component      | Purpose                               |
-|----------------|----------------------------------------|
-| FastAPI        | API orchestration                     |
-| LM Studio (LLM)| Natural language understanding         |
-| ChromaDB       | Semantic service registry              |
-| Docker         | Easy local and cloud deployments       |
-| JSON Schema    | Structured contracts for validation    |
-
----
-
-## 🧰 Components
-
-### 1. `coordinator_agent/`
-The main orchestrator service. Handles:
-- Query interpretation via LLM
-- Dynamic JSON schema generation
-- Topological sorting of services based on contract dependencies
-- Service execution and response aggregation
-
-#### Key files:
-- `main.py`: The `/dispatch` endpoint, request routing, LLM-based extraction, and execution loop.
-- `utils.py`: Everything from LLM prompting to contract validation, topo sorting, and logging.
-- `requirements.txt`: FastAPI + requests + jsonschema.
-
-### 2. `chroma-agents/`
-Utility module for bootstrapping service definitions into ChromaDB.
-
-#### Key files:
-- `bootstrap_chroma.py`: Uploads JSON service definitions (with metadata + contracts) into Chroma.
-- `*.json`: Service definition files (e.g., `customer.json`, `pricing.json`) including ID, description, endpoint, input/output contracts.
-- `Dockerfile`: Runs the bootstrapper with required deps (`chromadb[server]`, `requests`).
-
-### 3. `frontend/` (optional, stubbed)
-Likely intended for visualization or user input. Currently has just static files.
-
----
-
-## 📡 Flow Overview
+## 🧱 Architecture Overview
 
 ```plaintext
-User Query (natural language)
-    ↓
-LLM (via LM Studio)
-    → Extract structured JSON based on aggregated schema from service contracts
-    ↓
-ChromaDB Lookup
-    → Find candidate services and their metadata/contracts
-    ↓
-Dependency Resolver
-    → Sort services using topological sort based on input/output contract
-    ↓
-Service Execution Loop
-    → Inject resolved values, POST to services, update shared context
-    ↓
-Logging
-    → Each execution (or skip) is logged to a shared trace log
+User Query → LLM (via LM Studio)
+            ↓
+    ChromaDB Contract Lookup
+            ↓
+   Dependency Resolver (topo sort)
+            ↓
+   Service Execution Loop & Trace Logging
+            ↓
+    Final Result + Execution Summary
+```
+
+- 🔍 Uses **semantic embeddings** to find services
+- ⚖️ Resolves dependencies based on input/output contracts
+- 🔁 Executes only needed services, in order
+- 🧾 Logs every step for traceability
+
+---
+
+## 🧰 Tech Stack
+
+| Tool/Tech         | Purpose                                |
+|-------------------|----------------------------------------|
+| FastAPI           | Coordinator service API                |
+| LM Studio (LLM)   | Natural language understanding         |
+| ChromaDB          | Semantic service discovery             |
+| JSON Schema       | Contract-driven validation             |
+| Docker            | Containerized deployment               |
+| React (stub)      | Frontend concept & trace viewer (WIP)  |
+
+---
+
+## 📦 Repository Structure
+
+```plaintext
+chroma-agent-orchestrator/
+├── chroma-agents/         # Service definitions + ChromaDB bootstrapper
+├── coordinator_agent/     # Main orchestrator using FastAPI + LLM
+├── frontend/              # Stubbed UI (planned trace viewer)
+└── README.md              # You're here
 ```
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Quick Start
 
-### 1. Bootstrapping ChromaDB
+### 1. Start LM Studio (LLM)
+
+```bash
+export LMSTUDIO_URL=http://localhost:1234
+```
+
+---
+
+### 2. Bootstrap ChromaDB
 
 ```bash
 cd chroma-agents
 docker build -t chroma-bootstrap .
-docker run --rm -v $PWD:/app chroma-bootstrap \
-    --source /app \
-    --host <chroma-host> \
-    --port 8000 \
-    --collection services
+docker run --rm -v $PWD:/app chroma-bootstrap     --source /app     --host <chroma-host>     --port 8000     --collection services
 ```
 
-Or locally:
+---
 
-```bash
-python bootstrap_chroma.py --source . --host localhost --port 8000 --collection services
-```
-
-### 2. Coordinator Agent (FastAPI)
-
-Make sure LM Studio is running with the correct `/v1/chat/completions` and embedding endpoint exposed.
+### 3. Launch the Coordinator
 
 ```bash
 cd coordinator_agent
-uvicorn main:app --reload --host 0.0.0.0 --port 7000
+uvicorn main:app --reload --port 7000
 ```
 
-Environment variables:
+`.env` variables (or export directly):
+
 ```env
 LMSTUDIO_URL=http://localhost:1234
 chat_model=swe-dev-32b-i1
 embed_model=text-embedding-all-minilm-l12-v2
-CHROMA_AGENTS_URL=http://chroma-services:8000
-SERVICE_SELECTION_SYSTEM_PROMPT=coordinator_agent/prompts/serviceSelectionSystem.txt
-SERVICE_SELECTION_USER_PROMPT=coordinator_agent/prompts/serviceSelectionUser.txt
+CHROMA_AGENTS_URL=http://localhost:8000
+SERVICE_SELECTION_SYSTEM_PROMPT=prompts/serviceSelectionSystem.txt
+SERVICE_SELECTION_USER_PROMPT=prompts/serviceSelectionUser.txt
 ```
 
 ---
 
-## 🛠 Example Request
+## 🧪 Roadmap
 
-POST `/dispatch`:
-
-```json
-{
-  "query": "Find me an SUV for a premium customer in Munich",
-  "candidates": [
-    {
-      "id": "rental-service",
-      "document": "Rental service provides vehicle availability.",
-      "metadata": {
-        "endpoint": "http://rental:7001/availability",
-        "contract_input": "{...}",
-        "contract_output": "{...}"
-      }
-    }
-  ]
-}
-```
+- [ ] Semantic service recommender
+- [ ] Step-by-step service playback
+- [ ] Model switching + fallback support
 
 ---
 
-## 📎 Trace Example
+## 📜 License
 
-```json
-{
-  "timestamp": "2025-05-18T13:05:26.635900",
-  "service": "coordinator-agent",
-  "correlation_id": "abc-123",
-  "request": {
-    "location": "MUC"
-  },
-  "response": {
-    "vehicle_type": "SUV"
-  },
-  "target_service": "rental-service",
-  "reason": "executed after dependency resolution",
-  "query": "Find me an SUV..."
-}
-```
+MIT (or your license of choice)
 
 ---
 
-## 📦 Future Ideas
+## 🖼️ Execution Trace Gallery
 
-- [ ] Frontend Trace Viewer with Mermaid or JSON diff
-- [ ] Semantic service recommendation
-- [ ] Streaming or step-by-step service execution visualization
-- [ ] Model switching support
+### ✅ Full Successful Orchestration
+
+<img src="./screenshots/success_all_services_called.png" alt="All Services Called" width="100%"/>
 
 ---
 
-## 🧾 License
+### ⚠️ Partial Failure with Unresolvable Inputs
 
-MIT, or whatever license you're planning.
+<img src="./screenshots/failure_sequence_overview.png" alt="Failure Overview" width="100%"/>
+
+---
+
+### 🧪 Contract Inspection During Failure
+
+<img src="./screenshots/failure_with_contracts_expanded.png" alt="Failure with Contract Details" width="100%"/>
+
+---

@@ -72,12 +72,6 @@ services:
     volumes:
       - ./logs:/shared/logs
 
-  trace-observer:
-    build: ./trace-observer
-    ports:
-      - "9000:8000"
-    volumes:
-      - ./logs:/shared/logs
 
 volumes:
   chroma-services-data:

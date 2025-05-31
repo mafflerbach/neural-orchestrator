@@ -190,7 +190,7 @@ def log_event(correlation_id: str, service: Dict[str, Any], req: Dict, res: Dict
         "contract_input": service["metadata"].get("contract_input"),
         "contract_output": service["metadata"].get("contract_output"),
     }
-
+    print(json.dumps(event) + "\n")
     os.makedirs(os.path.dirname(log_path), exist_ok=True)
     with open(log_path, "a") as f:
         f.write(json.dumps(event) + "\n")

@@ -21,6 +21,7 @@ def log_event(service: str, correlation_id: str, request_data: dict, response_da
         "request": request_data,
         "response": response_data
     }
+    print(json.dumps(event) + "\n")
     os.makedirs(os.path.dirname(LOG_PATH), exist_ok=True)
     with open(LOG_PATH, "a") as f:
         f.write(json.dumps(event) + "\n")
